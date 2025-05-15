@@ -1,6 +1,6 @@
 import torch
 import torchvision.transforms as transforms
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 from PIL import Image
 import numpy as np
 import os
@@ -8,18 +8,19 @@ from sklearn.neighbors import NearestNeighbors
 import joblib
 from config import TILE_FOLDER
 
-# Load ResNet-18 model and remove classifier layer
-model = resnet18(pretrained=True)
+# Load ResNet-18 model with latest torchvision weights
+weights = ResNet18_Weights.DEFAULT
+model = resnet18(weights=weights)
 model = torch.nn.Sequential(*list(model.children())[:-1])
 model.eval()
 
-# Image transform for model input
+# Use correct normalization from weights.transforms()
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
+        mean=weights.transforms().mean,
+        std=weights.transforms().std
     )
 ])
 
@@ -36,7 +37,7 @@ def extract_features(image_path):
     return features.numpy()
 
 def compute_hash(image_path):
-    """Compute a simple average hash using Pillow + NumPy (compatible with latest Pillow)."""
+    """Compute average hash of image (used for duplicate removal)."""
     try:
         image = Image.open(image_path).convert('L').resize((8, 8), Image.Resampling.LANCZOS)
         pixels = np.array(image)
@@ -54,6 +55,10 @@ def build_image_index():
 
     for fname in os.listdir(TILE_FOLDER):
         path = os.path.join(TILE_FOLDER, fname)
+
+        if not fname.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+            continue
+
         image_hash = compute_hash(path)
         if not image_hash or image_hash in seen_hashes:
             continue
@@ -69,8 +74,8 @@ def build_image_index():
         return
 
     all_features = np.vstack(all_features)
-    joblib.dump((tile_names, all_features), 'tile_index.pkl')
-    print("✅ Feature index saved as 'tile_index.pkl' with duplicates removed.")
+    joblib.dump((tile_names, all_features), "tile_index.pkl")
+    print(f"✅ Indexed {len(tile_names)} images. Saved as 'tile_index.pkl'.")
 
 def find_best_matches(uploaded_image_path, top_k=5, min_threshold=0.6):
     if not os.path.exists("tile_index.pkl"):

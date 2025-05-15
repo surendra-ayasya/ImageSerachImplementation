@@ -1,14 +1,9 @@
 flask
-opencv-python
-numpy
-scikit-learn
-pillow
-torch
-torchvision
+torch==2.0.1
+torchvision==0.15.2
+open-clip-torch==2.20.0
+Pillow
 scikit-learn
 joblib
-open-clip-torch
-tqdm
-ftfy
-regex
+
 

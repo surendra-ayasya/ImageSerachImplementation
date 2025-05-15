@@ -1,35 +1,33 @@
-# clip_matcher.py
-import os
 import torch
 import open_clip
-from sklearn.neighbors import NearestNeighbors
+from PIL import Image
 import numpy as np
+from sklearn.neighbors import NearestNeighbors
 import joblib
+import os
+from config import TILE_FOLDER
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, _, preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion2b_s34b_b79k')
 tokenizer = open_clip.get_tokenizer('ViT-B-32')
 model = model.to(device)
-model.eval()
 
 def encode_text(text):
-    tokens = tokenizer([text]).to(device)
+    tokenized = tokenizer([text]).to(device)
     with torch.no_grad():
-        text_features = model.encode_text(tokens)
-    return text_features.cpu().numpy()
+        return model.encode_text(tokenized).cpu().numpy()
 
-def search_tiles_by_text(query, top_k=20, min_threshold=0.2):
+def search_tiles_by_text(description, top_k=10, min_threshold=0.5):
     if not os.path.exists("tile_clip_index.pkl"):
-        print("❌ You must run reindex_clip.py first.")
-        return []
+        raise FileNotFoundError("❌ Missing tile_clip_index.pkl. Please run reindex_clip.py locally to generate it.")
 
-    tile_names, feature_matrix = joblib.load("tile_clip_index.pkl")
-    text_vector = encode_text(query)
+    tile_names, clip_features = joblib.load("tile_clip_index.pkl")
+    text_feat = encode_text(description)
 
     nn_model = NearestNeighbors(n_neighbors=min(top_k, len(tile_names)), metric="cosine")
-    nn_model.fit(feature_matrix)
+    nn_model.fit(clip_features)
+    distances, indices = nn_model.kneighbors(text_feat)
 
-    distances, indices = nn_model.kneighbors(text_vector)
     results = []
     for dist, idx in zip(distances[0], indices[0]):
         sim = 1 - dist
