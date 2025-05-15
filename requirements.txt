@@ -1,0 +1,14 @@
+flask
+opencv-python
+numpy
+scikit-learn
+pillow
+torch
+torchvision
+scikit-learn
+joblib
+open-clip-torch
+tqdm
+ftfy
+regex
+
