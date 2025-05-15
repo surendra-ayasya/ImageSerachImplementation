@@ -1,27 +1,34 @@
 import torch
 import torchvision.transforms as transforms
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 from PIL import Image
 import numpy as np
 import os
 from sklearn.neighbors import NearestNeighbors
 import joblib
 from config import TILE_FOLDER
+from functools import lru_cache
 
-# Load ResNet-18 model and remove classifier layer
-model = resnet18(pretrained=True)
-model = torch.nn.Sequential(*list(model.children())[:-1])
-model.eval()
+# ✅ Lazy-load ResNet-18 model (removes classifier layer)
+@lru_cache(maxsize=1)
+def get_model():
+    weights = ResNet18_Weights.DEFAULT
+    model = resnet18(weights=weights)
+    model = torch.nn.Sequential(*list(model.children())[:-1])
+    model.eval()
+    return model
 
-# Image transform for model input
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
-])
+# ✅ Lazy-load transform
+@lru_cache(maxsize=1)
+def get_transform():
+    return transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225]
+        )
+    ])
 
 def extract_features(image_path):
     try:
@@ -30,13 +37,14 @@ def extract_features(image_path):
         print(f"⚠️ Error loading {image_path}: {e}")
         return np.zeros(512)
 
+    transform = get_transform()
     tensor = transform(image).unsqueeze(0)
     with torch.no_grad():
-        features = model(tensor).squeeze()
+        features = get_model()(tensor).squeeze()
     return features.numpy()
 
 def compute_hash(image_path):
-    """Compute a simple average hash using Pillow + NumPy (compatible with latest Pillow)."""
+    """Compute a simple average hash using Pillow + NumPy."""
     try:
         image = Image.open(image_path).convert('L').resize((8, 8), Image.Resampling.LANCZOS)
         pixels = np.array(image)
