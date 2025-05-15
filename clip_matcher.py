@@ -1,4 +1,3 @@
-# clip_matcher.py
 import os
 import torch
 import open_clip
@@ -6,42 +5,37 @@ from sklearn.neighbors import NearestNeighbors
 import numpy as np
 import joblib
 from PIL import Image
-from functools import lru_cache
 
-# -------------------------
-# Lazy-load model, tokenizer, and preprocess
-@lru_cache(maxsize=1)
 def get_clip_model():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    model, _, preprocess = open_clip.create_model_and_transforms(
-        'ViT-B-32', pretrained='laion2b_s34b_b79k'
-    )
-    model = model.to(device)
-    model.eval()
-    tokenizer = open_clip.get_tokenizer('ViT-B-32')
-    return model, tokenizer, preprocess, device
+    if not hasattr(get_clip_model, "model"):
+        model, _, preprocess = open_clip.create_model_and_transforms(
+            'ViT-B-32', pretrained='laion2b_s34b_b79k'
+        )
+        tokenizer = open_clip.get_tokenizer('ViT-B-32')
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = model.to(device)
+        model.eval()
+        get_clip_model.model = model
+        get_clip_model.preprocess = preprocess
+        get_clip_model.tokenizer = tokenizer
+        get_clip_model.device = device
+    return get_clip_model.model, get_clip_model.preprocess, get_clip_model.tokenizer, get_clip_model.device
 
-# -------------------------
-# Encode text query into vector
 def encode_text(text):
-    model, tokenizer, _, device = get_clip_model()
+    model, _, tokenizer, device = get_clip_model()
     tokens = tokenizer([text]).to(device)
     with torch.no_grad():
         text_features = model.encode_text(tokens)
     return text_features.cpu().numpy()
 
-# -------------------------
-# Encode image into vector
 def encode_image(image_path):
-    model, _, preprocess, device = get_clip_model()
+    model, preprocess, _, device = get_clip_model()
     image = Image.open(image_path).convert("RGB")
     image_input = preprocess(image).unsqueeze(0).to(device)
     with torch.no_grad():
         image_features = model.encode_image(image_input)
     return image_features.cpu().numpy()
 
-# -------------------------
-# Build CLIP feature index and save to disk
 def build_clip_index(tile_folder="static/tiles", output_file="tile_clip_index.pkl"):
     tile_names = []
     feature_list = []
@@ -56,16 +50,10 @@ def build_clip_index(tile_folder="static/tiles", output_file="tile_clip_index.pk
             except Exception as e:
                 print(f"⚠️ Failed to process {fname}: {e}")
 
-    if not feature_list:
-        print("❌ No features extracted.")
-        return
-
     feature_matrix = np.vstack(feature_list)
     joblib.dump((tile_names, feature_matrix), output_file)
     print(f"✅ Saved CLIP feature index to {output_file} with {len(tile_names)} tiles.")
 
-# -------------------------
-# Search tile images by text query
 def search_tiles_by_text(query, top_k=20, min_threshold=0.2):
     if not os.path.exists("tile_clip_index.pkl"):
         print("❌ You must run reindex_clip.py first.")

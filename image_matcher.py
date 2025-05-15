@@ -7,28 +7,25 @@ import os
 from sklearn.neighbors import NearestNeighbors
 import joblib
 from config import TILE_FOLDER
-from functools import lru_cache
 
-# ✅ Lazy-load ResNet-18 model (removes classifier layer)
-@lru_cache(maxsize=1)
-def get_model():
-    weights = ResNet18_Weights.DEFAULT
-    model = resnet18(weights=weights)
-    model = torch.nn.Sequential(*list(model.children())[:-1])
-    model.eval()
-    return model
+def get_resnet_model():
+    # Lazy-load the model only once
+    if not hasattr(get_resnet_model, "model"):
+        weights = ResNet18_Weights.DEFAULT
+        model = resnet18(weights=weights)
+        model = torch.nn.Sequential(*list(model.children())[:-1])
+        model.eval()
+        get_resnet_model.model = model
+    return get_resnet_model.model
 
-# ✅ Lazy-load transform
-@lru_cache(maxsize=1)
-def get_transform():
-    return transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225]
-        )
-    ])
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
 
 def extract_features(image_path):
     try:
@@ -37,14 +34,13 @@ def extract_features(image_path):
         print(f"⚠️ Error loading {image_path}: {e}")
         return np.zeros(512)
 
-    transform = get_transform()
     tensor = transform(image).unsqueeze(0)
+    model = get_resnet_model()
     with torch.no_grad():
-        features = get_model()(tensor).squeeze()
+        features = model(tensor).squeeze()
     return features.numpy()
 
 def compute_hash(image_path):
-    """Compute a simple average hash using Pillow + NumPy."""
     try:
         image = Image.open(image_path).convert('L').resize((8, 8), Image.Resampling.LANCZOS)
         pixels = np.array(image)
@@ -78,7 +74,7 @@ def build_image_index():
 
     all_features = np.vstack(all_features)
     joblib.dump((tile_names, all_features), 'tile_index.pkl')
-    print("✅ Feature index saved as 'tile_index.pkl' with duplicates removed.")
+    print("✅ Feature index saved as 'tile_index.pkl'.")
 
 def find_best_matches(uploaded_image_path, top_k=5, min_threshold=0.6):
     if not os.path.exists("tile_index.pkl"):
