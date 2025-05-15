@@ -1,9 +1,6 @@
 flask
-torch==2.0.1
-torchvision==0.15.2
-open-clip-torch==2.20.0
-Pillow
+opencv-python
+numpy
 scikit-learn
-joblib
-
-
+pillow
+flask-cors
