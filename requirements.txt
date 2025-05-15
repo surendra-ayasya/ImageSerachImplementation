@@ -1,6 +1,6 @@
 flask
 flask-cors
-numpy
+numpy<2
 Pillow
 scikit-learn
 torch==2.2.2+cpu
