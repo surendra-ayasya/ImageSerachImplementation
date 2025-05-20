@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useImage } from '../../Context/ImageContext';
 import { useNavigate } from 'react-router-dom';
+import conf from "../../../conf/conf.js";
 
 const SearchInput = () => {
   const [description, setDescription] = useState('');
@@ -17,7 +18,7 @@ const SearchInput = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/search', {
+      const response = await fetch(`http://${conf.backendUri}:5000/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

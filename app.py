@@ -62,7 +62,11 @@ def index():
             if description:
                 matches = search_tiles_by_text(description)
 
-    return render_template('index.html', matches=matches, filename=filename)
+    return jsonify({
+        "filename": filename,
+         "matches": matches
+    })
+
 
 # ✅ API Route: Upload image
 @app.route('/upload', methods=['POST'])
