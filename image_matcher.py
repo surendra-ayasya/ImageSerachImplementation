@@ -82,14 +82,15 @@ def build_image_index():
     joblib.dump((tile_names, all_features), 'tile_index.pkl')
     print("✅ Feature index saved as 'tile_index.pkl'.")
 
-def find_best_matches(uploaded_image_path, top_k=5, min_threshold=0.6, dedup_threshold=0.01):
+def find_best_matches(uploaded_image_path, top_k=20, min_threshold=0.5, dedup_threshold=0.01):
     if not os.path.exists("tile_index.pkl"):
         build_image_index()
 
     tile_names, feature_matrix = joblib.load("tile_index.pkl")
     uploaded_features = extract_features(uploaded_image_path, crop_to_center=True).reshape(1, -1)
 
-    model_nn = NearestNeighbors(n_neighbors=min(top_k + 10, len(tile_names)), metric="cosine")
+    # Request more neighbors to allow for deduplication
+    model_nn = NearestNeighbors(n_neighbors=min(top_k + 30, len(tile_names)), metric="cosine")
     model_nn.fit(feature_matrix)
     distances, indices = model_nn.kneighbors(uploaded_features)
 
@@ -103,7 +104,7 @@ def find_best_matches(uploaded_image_path, top_k=5, min_threshold=0.6, dedup_thr
 
         candidate_vector = feature_matrix[idx]
 
-        # Check if this vector is too similar to any already added
+        # Deduplicate near-duplicate vectors
         is_duplicate = any(
             np.dot(candidate_vector, seen_vec) /
             (np.linalg.norm(candidate_vector) * np.linalg.norm(seen_vec)) > (1 - dedup_threshold)
@@ -115,6 +116,7 @@ def find_best_matches(uploaded_image_path, top_k=5, min_threshold=0.6, dedup_thr
         results.append((tile_names[idx], similarity))
         seen_vectors.append(candidate_vector)
 
+        # Don't stop at 5 — continue collecting until max `top_k` or exhausted
         if len(results) >= top_k:
             break
 
