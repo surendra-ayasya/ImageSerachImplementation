@@ -1,5 +1,6 @@
 import { useImage } from '../../Context/ImageContext';
 import { useState, useMemo, useRef } from 'react';
+import conf from '../../../conf/conf.js'
 
 const filters = [
   { name: 'Tile Design', options: ['Glossy Finish', 'Matte Finish', 'Carving Finish'] },
@@ -213,7 +214,7 @@ const SearchResults = () => {
                 className="bg-white rounded-xl overflow-hidden shadow-sm border cursor-pointer"
               >
                 <img
-                  src={`http://127.0.0.1:5000${url}`}
+                  src={`http://${conf.backendUri}:5000${url}`}
                   alt={filename}
                   className="h-40 w-full object-cover"
                   onError={(e) => {
