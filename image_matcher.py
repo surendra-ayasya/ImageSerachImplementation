@@ -82,42 +82,47 @@ def build_image_index():
     joblib.dump((tile_names, all_features), 'tile_index.pkl')
     print("✅ Feature index saved as 'tile_index.pkl'.")
 
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
 def find_best_matches(uploaded_image_path, top_k=20, min_threshold=0.5, dedup_threshold=0.01):
     if not os.path.exists("tile_index.pkl"):
         build_image_index()
 
     tile_names, feature_matrix = joblib.load("tile_index.pkl")
-    uploaded_features = extract_features(uploaded_image_path, crop_to_center=True).reshape(1, -1)
+    uploaded_vector = extract_features(uploaded_image_path, crop_to_center=True).reshape(-1)
 
-    # Request more neighbors to allow for deduplication
-    model_nn = NearestNeighbors(n_neighbors=min(top_k + 30, len(tile_names)), metric="cosine")
-    model_nn.fit(feature_matrix)
-    distances, indices = model_nn.kneighbors(uploaded_features)
+    similarities = []
+    exact_match_found = False
 
-    results = []
+    for idx, tile_vector in enumerate(feature_matrix):
+        sim = cosine_similarity(uploaded_vector, tile_vector)
+
+        # Check for exact match using near-perfect cosine similarity
+        if not exact_match_found and sim >= 0.99999:
+            similarities.insert(0, (tile_names[idx], 1.0))  # Force exact match to the top
+            exact_match_found = True
+        elif sim >= min_threshold:
+            similarities.append((tile_names[idx], sim))
+
+    # Remove duplicates based on vector closeness
+    deduped_results = []
     seen_vectors = []
 
-    for dist, idx in zip(distances[0], indices[0]):
-        similarity = 1 - dist
-        if similarity < min_threshold:
-            continue
+    for name, sim in sorted(similarities, key=lambda x: x[1], reverse=True):
+        vec = feature_matrix[tile_names.index(name)]
 
-        candidate_vector = feature_matrix[idx]
-
-        # Deduplicate near-duplicate vectors
         is_duplicate = any(
-            np.dot(candidate_vector, seen_vec) /
-            (np.linalg.norm(candidate_vector) * np.linalg.norm(seen_vec)) > (1 - dedup_threshold)
+            cosine_similarity(vec, seen_vec) > (1 - dedup_threshold)
             for seen_vec in seen_vectors
         )
-        if is_duplicate:
-            continue
+        if not is_duplicate:
+            deduped_results.append((name, sim))
+            seen_vectors.append(vec)
 
-        results.append((tile_names[idx], similarity))
-        seen_vectors.append(candidate_vector)
-
-        # Don't stop at 5 — continue collecting until max `top_k` or exhausted
-        if len(results) >= top_k:
+        if len(deduped_results) >= top_k:
             break
 
-    return sorted(results, key=lambda x: x[1], reverse=True)
+    return deduped_results
+
+
