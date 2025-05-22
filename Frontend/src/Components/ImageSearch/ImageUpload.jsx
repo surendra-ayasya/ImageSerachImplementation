@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useImage } from '../../Context/ImageContext';
 import { useNavigate } from 'react-router-dom';
 import { FaCamera } from 'react-icons/fa';
-import conf from '../../../conf/conf.js'
+import conf from '../../../conf/conf.js';
 
 const ImageUpload = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -14,38 +14,62 @@ const ImageUpload = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setUploadedImage(URL.createObjectURL(file));
-    setIsAnalyzing(true);
-    setError(null);
+    const imageURL = URL.createObjectURL(file);
+    const img = new Image();
 
-    const formData = new FormData();
-    formData.append('image', file);
+    img.onload = async () => {
+      const minSize = 38;
 
-    try {
-      const response = await fetch(`http://${conf.backendUri}:5000/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Upload failed');
+      if (img.width <= minSize && img.height <= minSize) {
+        setError('Image is too small (less than or equal to 1cm x 1cm). Please upload a larger image.');
+        setIsAnalyzing(false);
+        event.target.value = null;
+        return;
       }
 
-      const data = await response.json();
-      console.log('Upload results:', data.results);
-      setSearchResults(data.results);
+      setUploadedImage(imageURL);
+      setIsAnalyzing(true);
+      setError(null);
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch(`http://${conf.backendUri}:5000/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Upload failed');
+        }
+
+        const data = await response.json();
+        setSearchResults(data.results);
+        setIsAnalyzing(false);
+        navigate('/results');
+      } catch (error) {
+        setError(error.message);
+        setIsAnalyzing(false);
+      }
+    };
+
+    img.onerror = () => {
+      setError('Invalid image file. Please upload a valid image.');
       setIsAnalyzing(false);
-      navigate('/results');
-    } catch (error) {
-      console.error('Upload error:', error.message);
-      setError(error.message);
-      setIsAnalyzing(false);
-    }
+    };
+
+    img.src = imageURL;
+  };
+
+  const closeErrorPopup = () => {
+    setError(null);
   };
 
   return (
     <div className="flex justify-center items-center bg-gray-100">
+      {/* Upload Box (unchanged) */}
       <label
         htmlFor="upload"
         className="w-64 h-64 border-2 border-dashed border-gray-400 rounded-lg cursor-pointer hover:bg-gray-200 flex flex-col items-center justify-center text-center"
@@ -61,6 +85,7 @@ const ImageUpload = () => {
         />
       </label>
 
+      {/* Analyzing Popup */}
       {isAnalyzing && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-10 rounded-lg text-center">
@@ -71,8 +96,20 @@ const ImageUpload = () => {
         </div>
       )}
 
+      {/* Error Modal */}
       {error && (
-        <p className="text-red-600 mt-4 text-sm text-center">{error}</p>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-xs p-6 text-center">
+            <h2 className="text-lg font-bold text-red-600 mb-2">Error</h2>
+            <p className="text-sm text-gray-700">{error}</p>
+            <button
+              onClick={closeErrorPopup}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

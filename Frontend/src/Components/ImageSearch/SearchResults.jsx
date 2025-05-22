@@ -25,50 +25,56 @@ const SearchResults = () => {
   const [error, setError] = useState(null);
   const failedImages = useRef(new Set());
 
-  // Handle new image upload
   const handleImageChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setUploadedImage(URL.createObjectURL(file));
-    setIsAnalyzing(true);
-    setError(null);
-    setCurrentPage(1); // Reset to first page for new results
-    setSelectedFilters({}); // Optional: Reset filters
-    setSortOrder(''); // Optional: Reset sorting
-
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      const response = await fetch(`http://${conf.backendUri}:5000/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Upload failed');
+    setError(null); // Reset any previous error
+    const image = new Image();
+    image.src = URL.createObjectURL(file);
+    image.onload = async () => {
+      if (image.width < 50 || image.height < 50) {
+        setError('Uploaded image is too small. Please upload an image at least 50x50 pixels.');
+        return;
       }
 
-      const data = await response.json();
-      console.log('New upload results:', data.results);
-      setSearchResults(data.results);
-      setIsAnalyzing(false);
-    } catch (error) {
-      console.error('Upload error:', error.message);
-      setError(error.message);
-      setIsAnalyzing(false);
-    }
+      setUploadedImage(image.src);
+      setIsAnalyzing(true);
+      setCurrentPage(1);
+      setSelectedFilters({});
+      setSortOrder('');
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch(`http://${conf.backendUri}:5000/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Upload failed');
+        }
+
+        const data = await response.json();
+        console.log('New upload results:', data.results);
+        setSearchResults(data.results);
+        setIsAnalyzing(false);
+      } catch (error) {
+        console.error('Upload error:', error.message);
+        setError(error.message);
+        setIsAnalyzing(false);
+      }
+    };
   };
 
-  // Filter and sort results
   const filteredResults = useMemo(() => {
     if (!searchResults.length) return [];
 
     let results = [...searchResults];
 
-    // Apply filters
     const filterKeys = Object.keys(selectedFilters);
     if (filterKeys.length > 0) {
       results = results.filter((item) =>
@@ -82,7 +88,6 @@ const SearchResults = () => {
       );
     }
 
-    // Apply sorting by score
     if (sortOrder === 'high-to-low') {
       results.sort((a, b) => b.score - a.score);
     } else if (sortOrder === 'low-to-high') {
@@ -92,7 +97,6 @@ const SearchResults = () => {
     return results;
   }, [searchResults, selectedFilters, sortOrder]);
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredResults.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentProducts = filteredResults.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -103,7 +107,6 @@ const SearchResults = () => {
     }
   };
 
-  // Handle checkbox filter change
   const handleFilterChange = (filterName, option) => {
     setSelectedFilters((prevFilters) => {
       const newFilters = { ...prevFilters };
@@ -124,12 +127,10 @@ const SearchResults = () => {
     setCurrentPage(1);
   };
 
-  // Toggle dropdown open/close
   const toggleFilterDropdown = (filterName) => {
     setOpenFilter(openFilter === filterName ? null : filterName);
   };
 
-  // Render pagination buttons with ellipsis
   const renderPageNumbers = () => {
     const pages = [];
     const visiblePages = [1, 2, 3, totalPages - 1, totalPages];
@@ -163,7 +164,6 @@ const SearchResults = () => {
   return (
     <div className="min-h-screen p-6 bg-gray-50">
       <div className="max-w-4xl mx-auto mb-8">
-        {/* Show SearchInput only if no image uploaded OR user is typing */}
         {(!uploadedImage || searchText.length > 0) && (
           <SearchInput searchText={searchText} setSearchText={setSearchText} />
         )}
@@ -217,7 +217,6 @@ const SearchResults = () => {
         Search Results
       </h1>
 
-      {/* Filters & Sorting */}
       <div className="flex flex-wrap gap-6 justify-center mb-6">
         {filters.map((filter) => (
           <div key={filter.name} className="relative">
@@ -310,7 +309,6 @@ const SearchResults = () => {
         </div>
       </div>
 
-      {/* Product Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-10">
         {currentProducts.length > 0 ? (
           currentProducts.map((product, idx) => {
@@ -346,7 +344,6 @@ const SearchResults = () => {
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center space-x-2 mb-10">
           <button

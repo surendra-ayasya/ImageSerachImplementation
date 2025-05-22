@@ -8,6 +8,7 @@ export const ImageProvider = ({ children }) => {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
   const [searchType, setSearchType] = useState(null);
+  const [searchDescription, setSearchDescription] = useState(''); 
 
   return (
     <ImageContext.Provider
@@ -18,6 +19,8 @@ export const ImageProvider = ({ children }) => {
         setSearchResults,
         searchType,
         setSearchType,
+        searchDescription,
+        setSearchDescription,
       }}
     >
       {children}

@@ -1,19 +1,25 @@
-import { useState } from 'react';
+// src/components/SearchInput.jsx
+import { useState, useEffect } from 'react';
 import { useImage } from '../../Context/ImageContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import conf from "../../../conf/conf.js";
 
 const SearchInput = () => {
-  const [description, setDescription] = useState('');
+  const {
+    setSearchResults,
+    searchDescription,
+    setSearchDescription,
+  } = useImage();
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const { setSearchResults } = useImage();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
 
-    if (!description.trim()) {
+    if (!searchDescription.trim()) {
       setError('Please enter a description');
       return;
     }
@@ -26,7 +32,7 @@ const SearchInput = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ description: searchDescription }),
       });
 
       if (!response.ok) {
@@ -37,7 +43,9 @@ const SearchInput = () => {
       const data = await response.json();
       setSearchResults(data.results);
       setError(null);
-      navigate('/results');
+      if (location.pathname !== '/results') {
+        navigate('/results');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,16 +53,19 @@ const SearchInput = () => {
     }
   };
 
+  useEffect(() => {
+    if (location.pathname === '/results' && searchDescription.trim()) {
+      handleSearch();
+    }
+  }, []);
+
   return (
-    <form
-      onSubmit={handleSearch}
-      className="w-full max-w-2xl mx-auto mt-6"
-    >
+    <form onSubmit={handleSearch} className="w-full max-w-2xl mx-auto mt-6">
       <div className="flex items-center overflow-hidden rounded-lg border border-gray-400">
         <input
           type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={searchDescription}
+          onChange={(e) => setSearchDescription(e.target.value)}
           placeholder="Search for products"
           className="flex-1 px-4 py-2 text-gray-700 focus:outline-none bg-white"
           disabled={loading}
@@ -77,7 +88,6 @@ const SearchInput = () => {
           )}
         </button>
       </div>
-
       {error && <p className="text-red-600 mt-2 text-sm">{error}</p>}
     </form>
   );
