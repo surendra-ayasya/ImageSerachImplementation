@@ -1,7 +1,8 @@
+import React, { useState, useMemo, useRef } from 'react';
 import { useImage } from '../../Context/ImageContext';
-import { useState, useMemo, useRef } from 'react';
 import conf from '../../../conf/conf.js';
 import SearchInput from './SearchInput.jsx';
+import ProductDescription from './ProductDescription.jsx';
 import { FaCamera } from 'react-icons/fa';
 
 const filters = [
@@ -25,11 +26,14 @@ const SearchResults = () => {
   const [error, setError] = useState(null);
   const failedImages = useRef(new Set());
 
+  // New state for modal product
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const handleImageChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setError(null); // Reset any previous error
+    setError(null);
     const image = new Image();
     image.src = URL.createObjectURL(file);
     image.onload = async () => {
@@ -43,6 +47,7 @@ const SearchResults = () => {
       setCurrentPage(1);
       setSelectedFilters({});
       setSortOrder('');
+      setSelectedProduct(null); // Close modal on new upload
 
       const formData = new FormData();
       formData.append('image', file);
@@ -59,11 +64,9 @@ const SearchResults = () => {
         }
 
         const data = await response.json();
-        console.log('New upload results:', data.results);
         setSearchResults(data.results);
         setIsAnalyzing(false);
       } catch (error) {
-        console.error('Upload error:', error.message);
         setError(error.message);
         setIsAnalyzing(false);
       }
@@ -170,33 +173,35 @@ const SearchResults = () => {
       </div>
 
       {uploadedImage && (
-        <div className="bg-white border rounded-xl p-4 md:p-6 max-w-3xl mx-auto mb-6 flex items-center space-x-4">
-          <img
-            src={uploadedImage}
-            alt="Uploaded"
-            className="w-20 h-20 object-cover rounded-md"
-          />
-          <div className="flex-1">
-            <p className="text-lg font-semibold text-gray-800">Uploaded Image</p>
-            <p className="text-gray-500">
-              Here are some products that match the image you uploaded.
-            </p>
-          </div>
-          <label
-            htmlFor="change-image"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer flex items-center"
-          >
-            <FaCamera className="mr-2" />
-            Change Image
-            <input
-              type="file"
-              id="change-image"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageChange}
-            />
-          </label>
-        </div>
+       <div className="bg-white border rounded-xl p-4 md:p-6 max-w-3xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0">
+  <img
+    src={uploadedImage}
+    alt="Uploaded"
+    className="w-20 h-20 object-cover rounded-md mx-auto sm:mx-0"
+  />
+  <div className="flex-1 text-center sm:text-left">
+    <p className="text-lg font-semibold text-gray-800 ml-2">Uploaded Image</p>
+    <p className="text-gray-500 ml-2">
+      Here are some products that match the image you uploaded.
+    </p>
+  </div>
+  <label
+    htmlFor="change-image"
+    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer flex items-center justify-center mx-auto sm:mx-0"
+  >
+    <FaCamera className="mr-2" />
+    Change Image
+    <input
+      type="file"
+      id="change-image"
+      accept="image/*"
+      className="hidden"
+      capture="environment"
+      onChange={handleImageChange}
+    />
+  </label>
+</div>
+
       )}
 
       {isAnalyzing && (
@@ -258,68 +263,53 @@ const SearchResults = () => {
           </div>
         ))}
 
-        {/* Relevance Sorting */}
-        <div className="relative">
-          <button
-            onClick={() => toggleFilterDropdown('Relevance')}
-            className="px-4 py-2 border rounded-lg text-gray-700 font-medium hover:bg-gray-100 flex items-center"
-            aria-expanded={openFilter === 'Relevance'}
-            aria-controls="dropdown-Relevance"
-          >
-            Relevance
-            <span
-              className={`ml-2 transform transition-transform duration-200 ${
-                openFilter === 'Relevance' ? 'rotate-180' : ''
-              }`}
-            >
-              ▼
-            </span>
-          </button>
-          {openFilter === 'Relevance' && (
-            <div
-              id="dropdown-Relevance"
-              className="absolute top-full left-0 mt-2 bg-white border rounded-lg shadow-lg w-48 z-10"
-            >
-              <div className="py-2 px-3">
-                <label className="block mb-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="relevance"
-                    value="high-to-low"
-                    checked={sortOrder === 'high-to-low'}
-                    onChange={() => setSortOrder('high-to-low')}
-                    className="mr-2"
-                  />
-                  High to Low
-                </label>
-                <label className="block cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="relevance"
-                    value="low-to-high"
-                    checked={sortOrder === 'low-to-high'}
-                    onChange={() => setSortOrder('low-to-high')}
-                    className="mr-2"
-                  />
-                  Low to High
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
+        <select
+          className="px-4 py-2 border rounded-lg text-gray-700 font-medium"
+          value={sortOrder}
+          onChange={(e) => {
+            setSortOrder(e.target.value);
+            setCurrentPage(1);
+          }}
+          aria-label="Sort results"
+        >
+          <option value="">Sort By Similarity</option>
+          <option value="high-to-low">High to Low</option>
+          <option value="low-to-high">Low to High</option>
+        </select>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-10">
         {currentProducts.length > 0 ? (
           currentProducts.map((product, idx) => {
             const { url, score, filename } = product;
+            const imageUrl = `http://${conf.backendUri}:5000${url}`;
+
             return (
               <div
                 key={url + idx}
                 className="bg-white rounded-xl overflow-hidden shadow-sm border cursor-pointer"
+                onClick={() =>
+                  setSelectedProduct({
+                    image: imageUrl,
+                    filename,
+                    score,
+                  })
+                }
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setSelectedProduct({
+                      image: imageUrl,
+                      filename,
+                      score,
+                    });
+                  }
+                }}
+                aria-label={`View details for ${filename}`}
               >
                 <img
-                  src={`http://${conf.backendUri}:5000${url}`}
+                  src={imageUrl}
                   alt={filename}
                   className="h-40 w-full object-cover"
                   onError={(e) => {
@@ -344,26 +334,33 @@ const SearchResults = () => {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center space-x-2 mb-10">
-          <button
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded-md text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-            aria-label="Previous page"
-          >
-            Prev
-          </button>
-          {renderPageNumbers()}
-          <button
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded-md text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-            aria-label="Next page"
-          >
-            Next
-          </button>
-        </div>
+      {/* Pagination */}
+      <div className="flex justify-center space-x-2 mb-12">
+        <button
+          className="px-3 py-1 rounded-md text-sm bg-gray-200 hover:bg-gray-300"
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          aria-label="Previous page"
+        >
+          Prev
+        </button>
+        {renderPageNumbers()}
+        <button
+          className="px-3 py-1 rounded-md text-sm bg-gray-200 hover:bg-gray-300"
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          aria-label="Next page"
+        >
+          Next
+        </button>
+      </div>
+
+      {/* Modal for product description */}
+      {selectedProduct && (
+        <ProductDescription
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
       )}
     </div>
   );

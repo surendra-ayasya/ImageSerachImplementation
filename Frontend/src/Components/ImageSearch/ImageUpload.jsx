@@ -10,6 +10,38 @@ const ImageUpload = () => {
   const { setUploadedImage, setSearchResults } = useImage();
   const navigate = useNavigate();
 
+  const compressImage = (image, quality = 0.8, maxSizeMB = 5) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = image.width;
+      canvas.height = image.height;
+      ctx.drawImage(image, 0, 0);
+
+      let currentQuality = quality;
+
+      const attemptCompression = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob && blob.size <= maxSizeMB * 1024 * 1024) {
+              resolve(blob);
+            } else if (currentQuality > 0.1) {
+              currentQuality -= 0.1;
+              attemptCompression(); // Retry with lower quality
+            } else {
+              resolve(blob); // Best-effort fallback
+            }
+          },
+          'image/jpeg',
+          currentQuality
+        );
+      };
+
+      attemptCompression();
+    });
+  };
+
   const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -31,10 +63,17 @@ const ImageUpload = () => {
       setIsAnalyzing(true);
       setError(null);
 
-      const formData = new FormData();
-      formData.append('image', file);
-
       try {
+        // 🔄 Compress image if it's > 5MB
+        let imageToUpload = file;
+        if (file.size > 5 * 1024 * 1024) {
+          const compressedBlob = await compressImage(img);
+          imageToUpload = new File([compressedBlob], file.name, { type: 'image/jpeg' });
+        }
+
+        const formData = new FormData();
+        formData.append('image', imageToUpload);
+
         const response = await fetch(`http://${conf.backendUri}:5000/upload`, {
           method: 'POST',
           body: formData,
@@ -69,7 +108,6 @@ const ImageUpload = () => {
 
   return (
     <div className="flex justify-center items-center bg-gray-100">
-      {/* Upload Box (unchanged) */}
       <label
         htmlFor="upload"
         className="w-64 h-64 border-2 border-dashed border-gray-400 rounded-lg cursor-pointer hover:bg-gray-200 flex flex-col items-center justify-center text-center"
@@ -80,25 +118,38 @@ const ImageUpload = () => {
           type="file"
           id="upload"
           accept="image/*"
+          capture="environment"
           className="hidden"
           onChange={handleImageUpload}
         />
       </label>
 
-      {/* Analyzing Popup */}
-      {isAnalyzing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-10 rounded-lg text-center">
-            <div className="loader mb-4"></div>
-            <h2 className="text-lg font-medium">Analyzing Image...</h2>
-            <p className="text-sm text-gray-600 mt-2">Please wait a few seconds</p>
-          </div>
-        </div>
-      )}
+     {isAnalyzing && (
+  <div
+    className="fixed inset-0 flex items-center justify-center z-50"
+    style={{
+      backgroundColor: 'rgba(0, 0, 0, 0.3)', // semi-transparent black
+      backdropFilter: 'blur(6px)',          // blur effect
+      WebkitBackdropFilter: 'blur(6px)',   // for Safari support
+    }}
+  >
+    <div className="bg-white p-10 rounded-lg text-center">
+      <div className="loader mb-4"></div>
+      <h2 className="text-lg font-medium">Analyzing Image...</h2>
+      <p className="text-sm text-gray-600 mt-2">Please wait a few seconds</p>
+    </div>
+  </div>
+)}
+
 
       {/* Error Modal */}
       {error && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+        style={{
+      backgroundColor: 'rgba(0, 0, 0, 0.3)', // semi-transparent black
+      backdropFilter: 'blur(6px)',          // blur effect
+      WebkitBackdropFilter: 'blur(6px)',   // for Safari support
+    }}>
           <div className="bg-white rounded-lg shadow-lg max-w-xs p-6 text-center">
             <h2 className="text-lg font-bold text-red-600 mb-2">Error</h2>
             <p className="text-sm text-gray-700">{error}</p>

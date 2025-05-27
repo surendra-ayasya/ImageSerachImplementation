@@ -15,8 +15,10 @@ CORS(app)  # Allow CORS for all routes
 
 # Configuration
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
+
+# Set max size to 10 MB (adjust as needed)
+MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 10 MB
 # Ensure upload folder exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
