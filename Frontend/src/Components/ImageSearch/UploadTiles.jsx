@@ -83,7 +83,7 @@ const UploadTiles = () => {
             <p className="text-lg font-semibold leading-tight">
               SELECT A FILE OR DRAG AND<br />DROP HERE
             </p>
-            <p className="text-xs text-gray-300 mb-4 mt-2">JPG, PNG, PDF. Maximum file size: 10MB</p>
+            <p className="text-xs text-gray-300 mb-4 mt-2">JPG, PNG  . Maximum file size: 5MB</p>
 
             <button
               onClick={() => inputRef.current?.click()}
