@@ -16,6 +16,7 @@ const SearchInput = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
 
@@ -52,6 +53,7 @@ const SearchInput = () => {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     if (location.pathname === '/results' && searchDescription.trim()) {

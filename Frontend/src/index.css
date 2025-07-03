@@ -16,17 +16,38 @@ html, body{
     font-family: 'Urbanist', 'ui-sans-serif', 'system-ui';
 }
 
-@keyframes slideDownFade {
-  0% {
-    opacity: 0;
-    transform: translateY(-40px);
+@layer utilities {
+  @keyframes shutter-down {
+    0% {
+      max-height: 0;
+      
+    }
+    100% {
+      max-height: 418px; /* adjust based on content */
+      
+    }
   }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-.animate-slide-down {
-  animation: slideDownFade 0.5s ease-out forwards;
+  @keyframes shutter-up {
+    0% {
+      max-height: 418px;
+      
+    }
+    100% {
+      max-height: 0;
+      
+    }
+  }
+
+  .shutter-down {
+    animation: shutter-down 0.8s ease-out forwards;
+    overflow: hidden;
+    
+  }
+
+  .shutter-up {
+    animation: shutter-up 0.8s ease-in forwards;
+    overflow: hidden;
+    
+  }
 }

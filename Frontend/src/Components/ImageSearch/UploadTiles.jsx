@@ -31,7 +31,7 @@ const UploadTiles = () => {
       ></div>
 
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black opacity-45 z-0"></div>
+      <div className="absolute inset-0 bg-black opacity-60 z-0"></div>
 
       {/* Main content */}
       <div className="relative z-10 flex flex-col md:flex-row w-full px-4 md:px-10">
@@ -84,7 +84,7 @@ const UploadTiles = () => {
               SELECT A FILE OR DRAG AND<br />DROP HERE
             </p>
             <p className="text-xs text-gray-300 mb-4 mt-2">JPG, PNG  . Maximum file size: 5MB</p>
-
+              
             <button
               onClick={() => inputRef.current?.click()}
               className="relative group px-12 py-2 border border-white text-white overflow-hidden transition duration-300 ease-in-out"
