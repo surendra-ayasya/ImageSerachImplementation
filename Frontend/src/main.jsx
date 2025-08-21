@@ -14,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <ImageProvider>
       <KajariaSearch />
+      
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/results" element={<Results />} />
