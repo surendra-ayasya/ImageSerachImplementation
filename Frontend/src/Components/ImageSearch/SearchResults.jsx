@@ -9,9 +9,9 @@ import threeLogo from '../../assets/grid3logo.png';
 import fourLogo from '../../assets/grid4logo.png';
 import filterLogo from '../../assets/filter.png';
 import heartLogo from '../../assets/heart.png';
- 
+
 const ITEMS_PER_PAGE = 9;
- 
+
 const SearchResults = () => {
   const { uploadedImage, searchResults, setUploadedImage, setSearchResults } = useImage();
   const [searchText, setSearchText] = useState('');
@@ -44,7 +44,7 @@ const SearchResults = () => {
     colors: true,
     priceRange: true,
   });
- 
+
   const handleFilterChange = (filterCategory, value) => {
     setSelectedFilters((prev) => {
       const currentFilters = prev[filterCategory] || [];
@@ -61,28 +61,28 @@ const SearchResults = () => {
       }
     });
   };
- 
+
   const handleImageChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
- 
+
     setError(null);
- 
+
     if (file.name === lastImageName) {
       setError('Please upload a different image.');
       return;
     }
- 
+
     const image = new Image();
     const imageURL = URL.createObjectURL(file);
     image.src = imageURL;
- 
+
     image.onload = async () => {
       if (image.width < 50 || image.height < 50) {
         setError('Uploaded image is too small. Please upload an image at least 50x50 pixels.');
         return;
       }
- 
+
       setUploadedImage(imageURL);
       setLastImageName(file.name);
       setIsAnalyzing(true);
@@ -99,21 +99,21 @@ const SearchResults = () => {
       });
       setSortOrder('');
       setSelectedProduct(null);
- 
+
       const formData = new FormData();
       formData.append('image', file);
- 
+
       try {
         const response = await fetch(`http://${conf.backendUri}:5000/upload`, {
           method: 'POST',
           body: formData,
         });
- 
+
         if (!response.ok) {
           const err = await response.json();
           throw new Error(err.error || 'Upload failed');
         }
- 
+
         const data = await response.json();
         setSearchResults(data.results);
         setIsAnalyzing(false);
@@ -123,12 +123,12 @@ const SearchResults = () => {
       }
     };
   };
- 
+
   const filteredResults = useMemo(() => {
     if (!searchResults.length) return [];
- 
+
     let results = [...searchResults];
- 
+
     const filterKeys = Object.keys(selectedFilters);
     if (filterKeys.length > 0) {
       results = results.filter((item) =>
@@ -143,26 +143,26 @@ const SearchResults = () => {
         })
       );
     }
- 
+
     if (sortOrder === 'high-to-low') {
       results.sort((a, b) => b.score - a.score);
     } else if (sortOrder === 'low-to-high') {
       results.sort((a, b) => a.score - b.score);
     }
- 
+
     return results;
   }, [searchResults, selectedFilters, sortOrder]);
- 
+
   const totalPages = Math.ceil(filteredResults.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentProducts = filteredResults.slice(startIndex, startIndex + ITEMS_PER_PAGE);
- 
+
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
- 
+
   const renderPageNumbers = () => {
     const pages = [];
     const visiblePages = [1, 2, 3, totalPages - 1, totalPages];
@@ -185,23 +185,23 @@ const SearchResults = () => {
       </button>
     ));
   };
- 
+
   const activeFilterCount = Object.values(selectedFilters).reduce(
     (total, filterArray) => total + filterArray.length,
     0
   );
- 
+
   const toggleSection = (section) => {
     setOpenSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
   };
- 
+
   const toggleFilters = () => {
     setIsFiltersOpen((prev) => !prev);
   };
- 
+
   const ProductPlaceholder = () => (
     <div className="d-flex flex-column gap-2 animate-pulse" style={{ height: '495px' }}>
       <div
@@ -215,7 +215,7 @@ const SearchResults = () => {
       </div>
     </div>
   );
- 
+
   const FilterCheckbox = ({ category, label, isChecked }) => (
     <div className="form-check custom-checkbox mb-2" style={{ marginBottom: '8px' }}>
       <input
@@ -235,7 +235,7 @@ const SearchResults = () => {
       </label>
     </div>
   );
- 
+
   return (
     <div className="p-4 bg-light" style={{ padding: '16px' }}>
       <style>
@@ -343,7 +343,7 @@ const SearchResults = () => {
       <div className="container mb-4" style={{ maxWidth: '960px', marginBottom: '16px' }}>
         {/* SearchInput component */}
       </div>
- 
+
       <div className="container d-block d-lg-none mb-4 mt-5" style={{ marginBottom: '16px', marginTop: '20px' }}>
         <img
           src={filterLogo}
@@ -354,7 +354,7 @@ const SearchResults = () => {
           aria-label="Show Filters"
         />
       </div>
- 
+
       {isAnalyzing && (
         <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center z-50">
           <div className="bg-white p-5 rounded text-center" style={{ padding: '20px' }}>
@@ -369,7 +369,7 @@ const SearchResults = () => {
           </div>
         </div>
       )}
- 
+
       <div className="container-fluid" style={{ maxWidth: '1512px' }}>
         <div className="row gx-4" style={{ columnGap: '16px' }}>
           <div
@@ -381,9 +381,9 @@ const SearchResults = () => {
                 {activeFilterCount.toString().padStart(2, '0')} Filters Active Now
               </span>
             </div>
- 
+
             {uploadedImage && (
-              <div className="mb-4 position-relative" style={{ marginBottom: '16px' }}>
+              <div className="mb-4 position-relative d-none d-lg-block" style={{ marginBottom: '16px' }}>
                 <div className="border border-secondary bg-white uploaded-image-container" style={{ border: '1px solid #D1D5DB', borderRadius: '8px' }}>
                   <img
                     src={uploadedImage}
@@ -411,7 +411,7 @@ const SearchResults = () => {
               </div>
             )}
             {error && <p className="text-sm text-danger mb-4" style={{ fontSize: '12px', color: '#EF4444', marginBottom: '16px' }}>{error}</p>}
- 
+
             {/* Wall Tiles Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -443,7 +443,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             {/* Floor Tiles Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -477,7 +477,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             {/* Sizes Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -509,7 +509,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             {/* Finishes Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -543,7 +543,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             {/* Ranges Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -567,7 +567,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             {/* Textures Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -591,7 +591,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             {/* Colors Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -616,7 +616,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             {/* Price Range Section */}
             <div className="mb-4" style={{ marginBottom: '16px' }}>
               <div
@@ -640,7 +640,7 @@ const SearchResults = () => {
                 </div>
               )}
             </div>
- 
+
             <div className="mt-4 d-lg-none" style={{ marginTop: '16px' }}>
               <button
                 onClick={toggleFilters}
@@ -652,11 +652,40 @@ const SearchResults = () => {
               </button>
             </div>
           </div>
- 
+
           <div
             className={`col-12 col-lg-9 bg-white p-4 shadow overflow-y-auto results-section ${isFiltersOpen ? 'd-none d-lg-block' : 'd-block'}`}
             style={{ padding: '16px', background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', borderRadius: '8px' }}
           >
+            {uploadedImage && (
+              <div className="mb-4 position-relative d-block d-lg-none" style={{ marginBottom: '16px' }}>
+                <div className="border border-secondary bg-white uploaded-image-container" style={{ border: '1px solid #D1D5DB', borderRadius: '8px' }}>
+                  <img
+                    src={uploadedImage}
+                    alt="Uploaded Tile"
+                    className="w-100 h-100 object-cover"
+                    style={{ width: '336px', height: '362px', borderRadius: '8px' }}
+                  />
+                  <label
+                    htmlFor="change-image-products"
+                    className="position-absolute bottom-0 start-0 m-2 w-10 h-10 bg-white rounded-circle d-flex align-items-center justify-content-center cursor-pointer"
+                    style={{ margin: '8px', width: '40px', height: '40px', bottom: '0', left: '0' }}
+                    aria-label="Change image"
+                  >
+                    <img src={uploadIcon} alt="Upload Icon" style={{ width: '24px', height: '24px' }} />
+                    <input
+                      type="file"
+                      id="change-image-products"
+                      accept="image/*"
+                      className="d-none"
+                      capture="environment"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
             <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap" style={{ marginBottom: '16px' }}>
               <span className="text-sm text-secondary" style={{ fontSize: '12px', color: '#6B7280' }}>
                 Filter by {filteredResults.length} 2x2 tiles available
@@ -678,8 +707,8 @@ const SearchResults = () => {
                 />
               </div>
             </div>
- 
-            <div className="product-grid ">
+
+            <div className="product-grid">
               {isAnalyzing ? (
                 Array.from({ length: ITEMS_PER_PAGE }).map((_, idx) => (
                   <div key={idx} className="col">
@@ -690,7 +719,7 @@ const SearchResults = () => {
                 currentProducts.map((product, idx) => {
                   const { url, score, filename } = product;
                   const imageUrl = `http://${conf.backendUri}:5000${url}`;
- 
+
                   return (
                     <div
                       key={url + idx}
@@ -794,7 +823,7 @@ const SearchResults = () => {
                 <p className="text-center text-secondary col-span-full" style={{ fontSize: '14px', color: '#6B7280' }}>No products found.</p>
               )}
             </div>
- 
+
             <div className="d-flex justify-content-center gap-2 mt-4 flex-wrap" style={{ marginTop: '16px', gap: '8px' }}>
               <button
                 onClick={() => goToPage(currentPage - 1)}
@@ -819,7 +848,7 @@ const SearchResults = () => {
           </div>
         </div>
       </div>
- 
+
       {selectedProduct && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center z-50 p-4"
@@ -878,5 +907,5 @@ const SearchResults = () => {
     </div>
   );
 };
- 
+
 export default SearchResults;
