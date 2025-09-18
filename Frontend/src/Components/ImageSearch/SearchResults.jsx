@@ -88,7 +88,7 @@ const SearchResults = () => {
       setIsAnalyzing(true);
       setCurrentPage(1);
       setSelectedFilters({
-        wallTiles: ['Bathroom Wall Tiles', 'Kitchen Wall Tiles'],
+        wallTiles: [],
         floorTiles: [],
         sizes: [],
         finishes: [],
@@ -717,8 +717,10 @@ const SearchResults = () => {
                 ))
               ) : currentProducts.length > 0 ? (
                 currentProducts.map((product, idx) => {
-                  const { url, score, filename } = product;
-                  const imageUrl = `http://${conf.backendUri}:5000${url}`;
+                  console.log('product', product)
+                  const { url, score, filename, productName, productUrl, sizes, category } = product;
+                  const imageUrl = url;
+                  console.log(productUrl);
 
                   return (
                     <div
@@ -729,7 +731,10 @@ const SearchResults = () => {
                           image: imageUrl,
                           filename,
                           score,
-                        })
+                          productUrl,
+                        }
+                      )
+
                       }
                       role="button"
                       tabIndex={0}
@@ -765,54 +770,27 @@ const SearchResults = () => {
                             }
                           }}
                         />
-                        <div className="hover-overlay">
-                          <div className="hover-content">
-                            <div
-                              className="heart-button"
-                              aria-label="Remember this!"
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                alert('Remembered!');
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  alert('Remembered!');
-                                }
-                              }}
-                            >
-                              <img src={heartLogo} alt="Heart" style={{ width: '24px', height: '24px' }} />
-                            </div>
-                            <span className="text-sm fw-semibold tracking-wide text-white" style={{ fontSize: '12px', fontWeight: '600', letterSpacing: '0.1em' }}>REMEMBER THIS</span>
-                          </div>
-                        </div>
+
                       </div>
                       <div className="d-flex flex-column product-details">
-                        <p className="fs-6 fw-bold text-dark text-uppercase text-start mb-1" style={{ fontSize: '16px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>{filename}</p>
-                        <p className="text-sm text-secondary text-start mb-1" style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
-                          Similarity: {(score * 100).toFixed(2)}%
-                        </p>
-                        <p className="text-sm text-secondary text-start mb-1" style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
-                          Glazed Tiles, Polished Finish, Large Format
-                        </p>
-                        <div className="d-flex align-items-center" style={{ width: '254px', height: '20px', gap: '8px' }}>
-                          <div className="d-flex align-items-center h-100">
+                        <p className="fs-6 fw-bold text-dark text-uppercase text-start mb-3 mt-3" style={{ fontSize: '16px', fontWeight: '700', color: '#1F2937', marginBottom: '2px' }}>{productName}</p>
+
+                        <div className="d-flex align-items-center" style={{  height: '50px'}}>
+                          <div className="d-flex align-items-center h-100" style={{ width: "100%" }}>
                             <span
-                              style={{ color: 'rgba(166, 135, 64, 1)', letterSpacing: '0.3em', fontSize: '12px', fontWeight: '600' }}
-                              className="fw-semibold text-xs text-uppercase"
-                            >
-                              ETERNITY
+                              style={{ color: 'rgba(166, 135, 64, 1)', letterSpacing: '0.3em', fontSize: '12px', fontWeight: '600'}}
+                              className="fw-semibold text-xs text-uppercase">
+                              {category}
                             </span>
                           </div>
                           <div className="h-4 w-px bg-secondary mx-2" style={{ height: '16px', width: '1px', backgroundColor: '#D1D5DB', margin: '0 8px' }}></div>
                           <div
                             className="d-flex align-items-center text-xs text-secondary ms-5"
-                            style={{ height: '100%', gap: '4px', whiteSpace: 'nowrap', marginLeft: '20px' }}
+                            style={{ height: '100%', gap: '4px', whiteSpace: 'nowwrap', marginLeft: '20px' }}
                           >
-                            <span style={{ fontSize: '12px', color: '#6B7280' }}>120x240cm,</span>
-                            <span className="fw-semibold cursor-pointer hover-text-dark" style={{ fontSize: '12px', fontWeight: '600', color: '#6B7280' }}>+More</span>
+
+                            <span style={{ fontSize: '13px', color: '#6B7280', whiteSpace: 'nowrap' }}>{sizes}</span>
+
                           </div>
                         </div>
                       </div>
@@ -849,60 +827,10 @@ const SearchResults = () => {
         </div>
       </div>
 
-      {selectedProduct && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center z-50 p-4"
-          onClick={() => setSelectedProduct(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
-          <div
-            className="bg-white rounded p-4 position-relative w-100 mw-100 max-w-3xl overflow-auto"
-            onClick={(e) => e.stopPropagation()}
-            style={{ padding: '16px', borderRadius: '8px', maxWidth: '800px' }}
-          >
-            <button
-              onClick={() => setSelectedProduct(null)}
-              className="position-absolute top-0 end-0 m-2 text-secondary hover-text-dark fs-5 fw-bold"
-              style={{ top: '8px', right: '8px', fontSize: '24px', color: '#6B7280' }}
-              aria-label="Close details modal"
-            >
-              ×
-            </button>
-            <img
-              src={selectedProduct.image}
-              alt={selectedProduct.filename}
-              className="w-100 rounded mb-4"
-              style={{ borderRadius: '8px', marginBottom: '16px' }}
-            />
-            <h2
-              id="modal-title"
-              className="text-dark mb-2"
-              style={{
-                fontFamily: 'Urbanist, sans-serif',
-                fontWeight: 600,
-                fontSize: '16px',
-                lineHeight: '140%',
-                verticalAlign: 'middle',
-                textTransform: 'uppercase',
-                width: '85px',
-                height: '11px',
-                letterSpacing: '0px',
-                color: '#1F2937',
-                marginBottom: '8px',
-              }}
-            >
-              {selectedProduct.filename}
-            </h2>
-            <p className="text-secondary mb-1" style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>
-              Similarity: {(selectedProduct.score * 100).toFixed(2)}%
-            </p>
-            <p className="text-secondary" style={{ fontSize: '14px', color: '#6B7280' }}>
-              Additional product details can go here.
-            </p>
-          </div>
-        </div>
+      {selectedProduct && selectedProduct.productUrl && (
+  window.location.href = selectedProduct.productUrl
+
+
       )}
     </div>
   );
